@@ -1,0 +1,49 @@
+{
+  "name": "glslx-vscode",
+  "description": "A language service for GLSLX",
+  "version": "0.0.1",
+  "publisher": "evanw",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evanw/glslx-vscode"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^0.10.1"
+  },
+  "categories": [
+    "Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:glslx"
+  ],
+  "main": "./src/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "glslx",
+        "aliases": [
+          "GLSLX",
+          "glslx"
+        ],
+        "extensions": [
+          ".glslx"
+        ],
+        "configuration": "./glslx.configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "glslx",
+        "scopeName": "source.glslx",
+        "path": "./syntaxes/GLSLX.tmLanguage"
+      }
+    ]
+  },
+  "dependencies": {
+    "glslx": "0.1.13",
+    "vscode": "0.10.6",
+    "vscode-languageclient": "^1.1.0",
+    "vscode-languageserver": "^1.1.0"
+  }
+}

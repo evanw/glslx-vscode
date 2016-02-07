@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>fileTypes</key>
+  <array>
+    <string>glslx</string>
+  </array>
+  <key>name</key>
+  <string>GLSLX</string>
+  <key>scopeName</key>
+  <string>source.glslx</string>
+  <key>patterns</key>
+  <array>
+    <dict>
+      <key>match</key>
+      <string>//.*</string>
+      <key>name</key>
+      <string>comment.glslx</string>
+    </dict>
+    <dict>
+      <key>begin</key>
+      <string>/\*</string>
+      <key>end</key>
+      <string>\*/</string>
+      <key>name</key>
+      <string>comment.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
+      <string>\b(?:attribute|break|const|continue|discard|do|else|false|float|for|highp|if|in|inout|invariant|lowp|mediump|out|precision|return|struct|true|uniform|varying|while)\b</string>
+      <key>name</key>
+      <string>keyword.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
+      <string>\b(?:export|import)\b</string>
+      <key>name</key>
+      <string>keyword.extension.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
+      <string>\b(?:asm|cast|class|default|double|dvec2|dvec3|dvec4|enum|extern|external|fixed|flat|fvec2|fvec3|fvec4|goto|half|hvec2|hvec3|hvec4|inline|input|interface|long|namespace|noinline|output|packed|public|sampler1D|sampler1DShadow|sampler2DRect|sampler2DRectShadow|sampler2DShadow|sampler3D|sampler3DRect|short|sizeof|static|superp|switch|template|this|typedef|union|unsigned|using|volatile)\b</string>
+      <key>name</key>
+      <string>keyword.reserved.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
+      <string>\b(?:[A-Z_][A-Z0-9_]+|true|false|(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:e[+-]?[0-9]+)?|0[xX][0-9A-Fa-f]+)\b</string>
+      <key>name</key>
+      <string>constant.numeric.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
+      <string>\b(?:bool|bvec2|bvec3|bvec4|float|int|ivec2|ivec3|ivec4|mat2|mat3|mat4|sampler2D|samplerCube|vec2|vec3|vec4|void|[A-Z][A-Za-z0-9_]+)\b</string>
+      <key>name</key>
+      <string>storage.type.glslx</string>
+    </dict>
+  </array>
+</dict>
+</plist>
