@@ -101,35 +101,76 @@ function computeTooltip(request) {
   return null;
 }
 
+function computeDocumentSymbols(request) {
+  var result = buildResults[request.uri];
+
+  if (result) {
+    var response = result.symbolsQuery({
+      source: request.uri,
+    });
+
+    if (response.symbols !== null) {
+      return response.symbols.map(function(symbol) {
+        return {
+          name: symbol.name,
+          kind:
+            symbol.kind === 'struct' ? 5 :
+            symbol.kind === 'function' ? 12 :
+            symbol.kind === 'variable' ? 13 :
+            null,
+          location: {
+            uri: request.uri,
+            range: convertRange(symbol.range),
+          },
+        };
+      });
+    }
+  }
+
+  return null;
+}
+
 function main() {
   connection = server.createConnection(
     new server.IPCMessageReader(process),
     new server.IPCMessageWriter(process));
 
-  // Listen to open documents
-  openDocuments = new server.TextDocuments;
-  openDocuments.listen(connection);
-  openDocuments.onDidChangeContent(buildLater);
+  reportErrors(function() {
+    // Listen to open documents
+    openDocuments = new server.TextDocuments;
+    openDocuments.listen(connection);
+    openDocuments.onDidChangeContent(buildLater);
 
-  // Grab the workspace when the connection opens
-  connection.onInitialize(function(params) {
-    workspaceRoot = params.rootPath || null;
-    buildLater();
-    return {
-      capabilities: {
-        textDocumentSync: openDocuments.syncKind,
-        hoverProvider: true,
-      },
-    };
-  });
-
-  // Show tooltips on hover
-  connection.onHover(function(request) {
-    var tooltip = null;
-    reportErrors(function() {
-      tooltip = computeTooltip(request);
+    // Grab the workspace when the connection opens
+    connection.onInitialize(function(params) {
+      workspaceRoot = params.rootPath || null;
+      buildLater();
+      return {
+        capabilities: {
+          textDocumentSync: openDocuments.syncKind,
+          hoverProvider: true,
+          documentSymbolProvider: true,
+        },
+      };
     });
-    return tooltip;
+
+    // Show tooltips on hover
+    connection.onHover(function(request) {
+      var tooltip = null;
+      reportErrors(function() {
+        tooltip = computeTooltip(request);
+      });
+      return tooltip;
+    });
+
+    // Support the go to symbol feature
+    connection.onDocumentSymbol(function(request) {
+      var info = null;
+      reportErrors(function() {
+        info = computeDocumentSymbols(request);
+      });
+      return info;
+    });
   });
 
   connection.listen();
