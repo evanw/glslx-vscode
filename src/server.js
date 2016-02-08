@@ -101,6 +101,27 @@ function computeTooltip(request) {
   return null;
 }
 
+function computeDefinitionLocation(request) {
+  var result = buildResults[request.uri];
+
+  if (result) {
+    var response = result.definitionQuery({
+      source: request.uri,
+      line: request.position.line,
+      column: request.position.character,
+    });
+
+    if (response.definition !== null) {
+      return {
+        uri: response.definition.source,
+        range: convertRange(response.definition),
+      };
+    }
+  }
+
+  return null
+}
+
 function computeDocumentSymbols(request) {
   var result = buildResults[request.uri];
 
@@ -130,6 +151,36 @@ function computeDocumentSymbols(request) {
   return null;
 }
 
+function computeRenameEdits(request) {
+  var result = buildResults[request.textDocument.uri];
+
+  if (result) {
+    var response = result.renameQuery({
+      source: request.textDocument.uri,
+      line: request.position.line,
+      column: request.position.character,
+    });
+
+    if (response.ranges !== null) {
+      var map = {};
+
+      response.ranges.forEach(function(range) {
+        var changes = map[range.source] || (map[range.source] = []);
+        changes.push({
+          range: convertRange(range),
+          newText: request.newName,
+        });
+      });
+
+      return {
+        changes: map,
+      };
+    }
+  }
+
+  return null;
+}
+
 function main() {
   connection = server.createConnection(
     new server.IPCMessageReader(process),
@@ -149,6 +200,8 @@ function main() {
         capabilities: {
           textDocumentSync: openDocuments.syncKind,
           hoverProvider: true,
+          renameProvider: true,
+          definitionProvider: true,
           documentSymbolProvider: true,
         },
       };
@@ -163,6 +216,15 @@ function main() {
       return tooltip;
     });
 
+    // Support the "go to definition" feature
+    connection.onDefinition(function(request) {
+      var location = null;
+      reportErrors(function() {
+        location = computeDefinitionLocation(request);
+      })
+      return location;
+    });
+
     // Support the go to symbol feature
     connection.onDocumentSymbol(function(request) {
       var info = null;
@@ -171,6 +233,18 @@ function main() {
       });
       return info;
     });
+
+    // Support the "rename symbol" feature
+    connection.onRenameRequest(function(request) {
+      var edits = null;
+      reportErrors(function() {
+        edits = computeRenameEdits(request);
+      });
+      return edits;
+    });
+
+    // Listen to file system changes for *.glslx files
+    connection.onDidChangeWatchedFiles(buildLater);
   });
 
   connection.listen();
