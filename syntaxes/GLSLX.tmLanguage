@@ -52,7 +52,7 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:bool|bvec2|bvec3|bvec4|float|int|ivec2|ivec3|ivec4|mat2|mat3|mat4|sampler2D|samplerCube|vec2|vec3|vec4|void|[A-Z][A-Za-z0-9_]+)\b</string>
+      <string>\b(?:bool|bvec2|bvec3|bvec4|float|int|ivec2|ivec3|ivec4|mat2|mat3|mat4|sampler2D|samplerCube|vec2|vec3|vec4|void)\b</string>
       <key>name</key>
       <string>storage.type.glslx</string>
     </dict>
