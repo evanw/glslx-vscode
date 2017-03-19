@@ -1,3 +1,6 @@
+var fs = require('fs');
+var uri = require('vscode-uri').default;
+var path = require('path');
 var glslx = require('glslx');
 var server = require('vscode-languageserver');
 
@@ -30,6 +33,15 @@ function convertRange(range) {
   };
 }
 
+function uriToPath(value) {
+  var parsed = uri.parse(value);
+  return parsed.scheme === 'file' ? path.normalize(parsed.fsPath) : null;
+}
+
+function pathToURI(value) {
+  return uri.file(value).toString();
+}
+
 function sendDiagnostics(diagnostics) {
   var map = {};
 
@@ -57,11 +69,42 @@ function buildLater() {
     reportErrors(function() {
       var diagnostics = [];
       var results = {};
+      var docs = {};
+
+      openDocuments.all().forEach(function(doc) {
+        docs[doc.uri] = doc.getText();
+      });
+
+      function fileAccess(includeText, relativeURI) {
+        var relativePath = uriToPath(relativeURI);
+        var absolutePath = relativePath ? path.resolve(path.dirname(path.resolve(relativePath)), includeText) : path.resolve(includeText);
+
+        // In-memory files take precedence
+        var absoluteURI = pathToURI(absolutePath);
+        if (absoluteURI in docs) {
+          return {
+            name: absoluteURI,
+            contents: docs[absoluteURI],
+          };
+        }
+
+        // Then try to read from disk
+        try {
+          return {
+            name: absoluteURI,
+            contents: fs.readFileSync(absolutePath, 'utf8'),
+          };
+        } catch (e) {
+          return null;
+        }
+      }
 
       openDocuments.all().forEach(function(doc) {
         var result = glslx.compileIDE({
           name: doc.uri,
-          contents: doc.getText(),
+          contents: docs[doc.uri],
+        }, {
+          fileAccess: fileAccess,
         });
         results[doc.uri] = result;
         diagnostics.push.apply(diagnostics, result.diagnostics);
@@ -74,11 +117,11 @@ function buildLater() {
 }
 
 function computeTooltip(request) {
-  var result = buildResults[request.uri];
+  var result = buildResults[request.textDocument.uri];
 
   if (result) {
     var response = result.tooltipQuery({
-      source: request.uri,
+      source: request.textDocument.uri,
       line: request.position.line,
       column: request.position.character,
 
@@ -102,11 +145,11 @@ function computeTooltip(request) {
 }
 
 function computeDefinitionLocation(request) {
-  var result = buildResults[request.uri];
+  var result = buildResults[request.textDocument.uri];
 
   if (result) {
     var response = result.definitionQuery({
-      source: request.uri,
+      source: request.textDocument.uri,
       line: request.position.line,
       column: request.position.character,
     });
@@ -123,11 +166,11 @@ function computeDefinitionLocation(request) {
 }
 
 function computeDocumentSymbols(request) {
-  var result = buildResults[request.uri];
+  var result = buildResults[request.textDocument.uri];
 
   if (result) {
     var response = result.symbolsQuery({
-      source: request.uri,
+      source: request.textDocument.uri,
     });
 
     if (response.symbols !== null) {
@@ -140,7 +183,7 @@ function computeDocumentSymbols(request) {
             symbol.kind === 'variable' ? 13 :
             null,
           location: {
-            uri: request.uri,
+            uri: symbol.range.source,
             range: convertRange(symbol.range),
           },
         };
@@ -162,18 +205,29 @@ function computeRenameEdits(request) {
     });
 
     if (response.ranges !== null) {
+      var documentChanges = [];
       var map = {};
 
       response.ranges.forEach(function(range) {
-        var changes = map[range.source] || (map[range.source] = []);
-        changes.push({
+        var edits = map[range.source];
+        if (!edits) {
+          var doc = openDocuments.get(range.source);
+          edits = map[range.source] = [];
+          if (doc) {
+            documentChanges.push({
+              textDocument: {uri: range.source, version: doc.version},
+              edits, edits,
+            });
+          }
+        }
+        edits.push({
           range: convertRange(range),
           newText: request.newName,
         });
       });
 
       return {
-        changes: map,
+        documentChanges: documentChanges,
       };
     }
   }

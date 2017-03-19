@@ -40,9 +40,21 @@
     </dict>
     <dict>
       <key>match</key>
+      <string>#(?:extension|include|version)\b</string>
+      <key>name</key>
+      <string>keyword.preprocessor.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
       <string>\b(?:asm|cast|class|default|double|dvec2|dvec3|dvec4|enum|extern|external|fixed|flat|fvec2|fvec3|fvec4|goto|half|hvec2|hvec3|hvec4|inline|input|interface|long|namespace|noinline|output|packed|public|sampler1D|sampler1DShadow|sampler2DRect|sampler2DRectShadow|sampler2DShadow|sampler3D|sampler3DRect|short|sizeof|static|superp|switch|template|this|typedef|union|unsigned|using|volatile)\b</string>
       <key>name</key>
       <string>keyword.reserved.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
+      <string>"(?:[^"\\]|\\.)*"</string>
+      <key>name</key>
+      <string>string.quoted.glslx</string>
     </dict>
     <dict>
       <key>match</key>
