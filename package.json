@@ -1,7 +1,7 @@
 {
   "name": "glslx-vscode",
   "description": "A language service for GLSLX",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "publisher": "evanw",
   "repository": {
     "type": "git",
@@ -41,7 +41,7 @@
     ]
   },
   "dependencies": {
-    "glslx": "0.1.24",
+    "glslx": "0.1.25",
     "vscode": "0.10.6",
     "vscode-languageclient": "3.2.0",
     "vscode-languageserver": "3.2.0",
