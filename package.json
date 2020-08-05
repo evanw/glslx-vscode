@@ -42,9 +42,11 @@
   },
   "dependencies": {
     "glslx": "0.2.0",
-    "vscode": "0.10.6",
     "vscode-languageclient": "3.2.0",
     "vscode-languageserver": "3.2.0",
     "vscode-uri": "1.0.0"
+  },
+  "devDependencies": {
+    "vscode": "0.10.6"
   }
 }
