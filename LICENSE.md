@@ -1,4 +1,4 @@
-Copyright (c) 2015 Evan Wallace
+Copyright (c) 2015-2020 Evan Wallace
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

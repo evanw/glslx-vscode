@@ -6,4 +6,4 @@ This adds support for the [GLSLX shader language](https://github.com/evanw/glslx
 
 ## Installation
 
-Installing extensions in Visual Studio Code is a little strange. Use Ctrl+P to bring up the in-app command line (Command+P on OS X), then type "ext install glslx-vscode" and press enter when it loads.
+Open Visual Studio Code, click on the extensions tab, search for `glslx-vscode`, and click Install.
