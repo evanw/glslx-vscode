@@ -45,7 +45,7 @@ function pathToURI(value) {
 function sendDiagnostics(diagnostics) {
   var map = {};
 
-  diagnostics.forEach(function(diagnostic) {
+  diagnostics.forEach(function (diagnostic) {
     var key = diagnostic.range.source;
     var group = map[key] || (map[key] = []);
     group.push({
@@ -55,7 +55,7 @@ function sendDiagnostics(diagnostics) {
     });
   });
 
-  openDocuments.all().forEach(function(doc) {
+  openDocuments.all().forEach(function (doc) {
     connection.sendDiagnostics({
       uri: doc.uri,
       diagnostics: map[doc.uri] || [],
@@ -65,13 +65,13 @@ function sendDiagnostics(diagnostics) {
 
 function buildLater() {
   clearTimeout(timeout);
-  timeout = setTimeout(function() {
-    reportErrors(function() {
+  timeout = setTimeout(function () {
+    reportErrors(function () {
       var diagnostics = [];
       var results = {};
       var docs = {};
 
-      openDocuments.all().forEach(function(doc) {
+      openDocuments.all().forEach(function (doc) {
         docs[doc.uri] = doc.getText();
       });
 
@@ -99,7 +99,7 @@ function buildLater() {
         }
       }
 
-      openDocuments.all().forEach(function(doc) {
+      openDocuments.all().forEach(function (doc) {
         var result = glslx.compileIDE({
           name: doc.uri,
           contents: docs[doc.uri],
@@ -174,14 +174,14 @@ function computeDocumentSymbols(request) {
     });
 
     if (response.symbols !== null) {
-      return response.symbols.map(function(symbol) {
+      return response.symbols.map(function (symbol) {
         return {
           name: symbol.name,
           kind:
             symbol.kind === 'struct' ? 5 :
-            symbol.kind === 'function' ? 12 :
-            symbol.kind === 'variable' ? 13 :
-            null,
+              symbol.kind === 'function' ? 12 :
+                symbol.kind === 'variable' ? 13 :
+                  null,
           location: {
             uri: symbol.range.source,
             range: convertRange(symbol.range),
@@ -208,14 +208,14 @@ function computeRenameEdits(request) {
       var documentChanges = [];
       var map = {};
 
-      response.ranges.forEach(function(range) {
+      response.ranges.forEach(function (range) {
         var edits = map[range.source];
         if (!edits) {
           var doc = openDocuments.get(range.source);
           edits = map[range.source] = [];
           if (doc) {
             documentChanges.push({
-              textDocument: {uri: range.source, version: doc.version},
+              textDocument: { uri: range.source, version: doc.version },
               edits, edits,
             });
           }
@@ -240,14 +240,14 @@ function main() {
     new server.IPCMessageReader(process),
     new server.IPCMessageWriter(process));
 
-  reportErrors(function() {
+  reportErrors(function () {
     // Listen to open documents
     openDocuments = new server.TextDocuments;
     openDocuments.listen(connection);
     openDocuments.onDidChangeContent(buildLater);
 
     // Grab the workspace when the connection opens
-    connection.onInitialize(function(params) {
+    connection.onInitialize(function (params) {
       workspaceRoot = params.rootPath || null;
       buildLater();
       return {
@@ -262,36 +262,36 @@ function main() {
     });
 
     // Show tooltips on hover
-    connection.onHover(function(request) {
+    connection.onHover(function (request) {
       var tooltip = null;
-      reportErrors(function() {
+      reportErrors(function () {
         tooltip = computeTooltip(request);
       });
       return tooltip;
     });
 
     // Support the "go to definition" feature
-    connection.onDefinition(function(request) {
+    connection.onDefinition(function (request) {
       var location = null;
-      reportErrors(function() {
+      reportErrors(function () {
         location = computeDefinitionLocation(request);
       })
       return location;
     });
 
     // Support the go to symbol feature
-    connection.onDocumentSymbol(function(request) {
+    connection.onDocumentSymbol(function (request) {
       var info = null;
-      reportErrors(function() {
+      reportErrors(function () {
         info = computeDocumentSymbols(request);
       });
       return info;
     });
 
     // Support the "rename symbol" feature
-    connection.onRenameRequest(function(request) {
+    connection.onRenameRequest(function (request) {
       var edits = null;
-      reportErrors(function() {
+      reportErrors(function () {
         edits = computeRenameEdits(request);
       });
       return edits;

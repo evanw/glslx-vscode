@@ -2,7 +2,7 @@ var path = require('path');
 var vscode = require('vscode');
 var client = require('vscode-languageclient');
 
-exports.activate = function(context) {
+exports.activate = function (context) {
   var serverModule = path.join(__dirname, 'server.js');
 
   var serverOptions = {
