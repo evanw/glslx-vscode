@@ -235,6 +235,52 @@ function computeRenameEdits(request) {
   return null;
 }
 
+function formatDocument(request) {
+  var doc = openDocuments.get(request.textDocument.uri)
+  if (!doc) {
+    return [];
+  }
+
+  var options = request.options || {};
+  var input = doc.getText();
+  var output = glslx.format(input, {
+    indent: options.insertSpaces ? ' '.repeat(options.tabSize || 2) : '\t',
+    newline: '\n',
+
+    // It seems like it's impossible to get the trailing newline settings from
+    // VSCode here? They are always undefined for some reason even though they
+    // are present in the type definitions. It says they are present as of
+    // version 3.15.0 but the published version of "vscode-languageserver" only
+    // goes up to 3.5.0 before 4.0.0. This seems like a bug in VSCode itself:
+    // https://github.com/microsoft/vscode-languageserver-node/issues/617
+    //
+    //   trailingNewline:
+    //     options.insertFinalNewline ? 'insert' :
+    //       options.trimFinalNewlines ? 'remove' :
+    //         'preserve',
+    //
+    trailingNewline: 'insert',
+  });
+
+  // Early-out if nothing changed
+  if (input === output) {
+    return [];
+  }
+
+  // Just return one big edit. VSCode seems to be smart enough to keep the
+  // cursor in the right place if whitespace between tokens shifts around.
+  return [{
+    range: {
+      start: {
+        line: 0,
+        character: 0,
+      },
+      end: doc.positionAt(input.length),
+    },
+    newText: output,
+  }];
+}
+
 function main() {
   connection = server.createConnection(
     new server.IPCMessageReader(process),
@@ -257,6 +303,7 @@ function main() {
           renameProvider: true,
           definitionProvider: true,
           documentSymbolProvider: true,
+          documentFormattingProvider: true,
         },
       };
     });
@@ -293,6 +340,15 @@ function main() {
       var edits = null;
       reportErrors(function () {
         edits = computeRenameEdits(request);
+      });
+      return edits;
+    });
+
+    // Support whole-document formatting
+    connection.onDocumentFormatting(function (request) {
+      var edits = null;
+      reportErrors(function () {
+        edits = formatDocument(request);
       });
       return edits;
     });
