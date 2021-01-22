@@ -1,26 +1,26 @@
-var fs = require('fs');
-var uri = require('vscode-uri').default;
-var path = require('path');
-var glslx = require('glslx');
-var server = require('vscode-languageserver');
+import * as fs from 'fs';
+import uri from 'vscode-uri';
+import * as path from 'path';
+import * as glslx from 'glslx';
+import * as server from 'vscode-languageserver/node';
+import { TextDocument } from 'vscode-languageserver-textdocument';
 
-var buildResults = {};
-var workspaceRoot = null;
-var openDocuments = null;
-var connection = null;
-var timeout = null;
+let buildResults: Record<string, glslx.CompileResultIDE | undefined> = {};
+let openDocuments: server.TextDocuments<TextDocument>;
+let connection: server.Connection;
+let timeout: NodeJS.Timeout;
 
-function reportErrors(callback) {
+function reportErrors(callback: () => void): void {
   try {
     callback();
   } catch (e) {
-    var message = e && e.stack || e;
+    let message = e && e.stack || e;
     connection.console.error('glslx: ' + message);
     connection.window.showErrorMessage('glslx: ' + message);
   }
 }
 
-function convertRange(range) {
+function convertRange(range: glslx.Range): server.Range {
   return {
     start: {
       line: range.start.line,
@@ -33,54 +33,55 @@ function convertRange(range) {
   };
 }
 
-function uriToPath(value) {
-  var parsed = uri.parse(value);
+function uriToPath(value: string): string | null {
+  let parsed = uri.parse(value);
   return parsed.scheme === 'file' ? path.normalize(parsed.fsPath) : null;
 }
 
-function pathToURI(value) {
+function pathToURI(value: string): string {
   return uri.file(value).toString();
 }
 
-function sendDiagnostics(diagnostics) {
-  var map = {};
+function sendDiagnostics(diagnostics: glslx.Diagnostic[]): void {
+  let map: Record<string, server.Diagnostic[]> = {};
 
-  diagnostics.forEach(function (diagnostic) {
-    var key = diagnostic.range.source;
-    var group = map[key] || (map[key] = []);
+  for (let diagnostic of diagnostics) {
+    if (!diagnostic.range) continue;
+    let key = diagnostic.range.source;
+    let group = map[key] || (map[key] = []);
     group.push({
       severity: diagnostic.kind === 'error' ? server.DiagnosticSeverity.Error : server.DiagnosticSeverity.Warning,
       range: convertRange(diagnostic.range),
       message: diagnostic.text,
     });
-  });
+  }
 
-  openDocuments.all().forEach(function (doc) {
+  for (let doc of openDocuments.all()) {
     connection.sendDiagnostics({
       uri: doc.uri,
       diagnostics: map[doc.uri] || [],
     });
-  });
+  }
 }
 
-function buildLater() {
+function buildLater(): void {
   clearTimeout(timeout);
-  timeout = setTimeout(function () {
-    reportErrors(function () {
-      var diagnostics = [];
-      var results = {};
-      var docs = {};
+  timeout = setTimeout(() => {
+    reportErrors(() => {
+      let diagnostics: glslx.Diagnostic[] = [];
+      let results: Record<string, glslx.CompileResultIDE> = {};
+      let docs: Record<string, string> = {};
 
       openDocuments.all().forEach(function (doc) {
         docs[doc.uri] = doc.getText();
       });
 
-      function fileAccess(includeText, relativeURI) {
-        var relativePath = uriToPath(relativeURI);
-        var absolutePath = relativePath ? path.resolve(path.dirname(path.resolve(relativePath)), includeText) : path.resolve(includeText);
+      function fileAccess(includeText: string, relativeURI: string) {
+        let relativePath = uriToPath(relativeURI);
+        let absolutePath = relativePath ? path.resolve(path.dirname(path.resolve(relativePath)), includeText) : path.resolve(includeText);
 
         // In-memory files take precedence
-        var absoluteURI = pathToURI(absolutePath);
+        let absoluteURI = pathToURI(absolutePath);
         if (absoluteURI in docs) {
           return {
             name: absoluteURI,
@@ -100,7 +101,7 @@ function buildLater() {
       }
 
       openDocuments.all().forEach(function (doc) {
-        var result = glslx.compileIDE({
+        let result = glslx.compileIDE({
           name: doc.uri,
           contents: docs[doc.uri],
         }, {
@@ -116,11 +117,11 @@ function buildLater() {
   }, 100);
 }
 
-function computeTooltip(request) {
-  var result = buildResults[request.textDocument.uri];
+function computeTooltip(request: server.TextDocumentPositionParams): server.Hover | undefined {
+  let result = buildResults[request.textDocument.uri];
 
   if (result) {
-    var response = result.tooltipQuery({
+    let response = result.tooltipQuery({
       source: request.textDocument.uri,
       line: request.position.line,
       column: request.position.character,
@@ -140,15 +141,13 @@ function computeTooltip(request) {
       }
     }
   }
-
-  return null;
 }
 
-function computeDefinitionLocation(request) {
-  var result = buildResults[request.textDocument.uri];
+function computeDefinitionLocation(request: server.TextDocumentPositionParams): server.Definition | undefined {
+  let result = buildResults[request.textDocument.uri];
 
   if (result) {
-    var response = result.definitionQuery({
+    let response = result.definitionQuery({
       source: request.textDocument.uri,
       line: request.position.line,
       column: request.position.character,
@@ -161,27 +160,24 @@ function computeDefinitionLocation(request) {
       };
     }
   }
-
-  return null
 }
 
-function computeDocumentSymbols(request) {
-  var result = buildResults[request.textDocument.uri];
+function computeDocumentSymbols(request: server.DocumentSymbolParams): server.SymbolInformation[] | undefined {
+  let result = buildResults[request.textDocument.uri];
 
   if (result) {
-    var response = result.symbolsQuery({
+    let response = result.symbolsQuery({
       source: request.textDocument.uri,
     });
 
     if (response.symbols !== null) {
-      return response.symbols.map(function (symbol) {
+      return response.symbols.map(symbol => {
         return {
           name: symbol.name,
           kind:
-            symbol.kind === 'struct' ? 5 :
-              symbol.kind === 'function' ? 12 :
-                symbol.kind === 'variable' ? 13 :
-                  null,
+            symbol.kind === 'struct' ? server.SymbolKind.Class :
+              symbol.kind === 'function' ? server.SymbolKind.Function :
+                server.SymbolKind.Variable,
           location: {
             uri: symbol.range.source,
             range: convertRange(symbol.range),
@@ -190,33 +186,31 @@ function computeDocumentSymbols(request) {
       });
     }
   }
-
-  return null;
 }
 
-function computeRenameEdits(request) {
-  var result = buildResults[request.textDocument.uri];
+function computeRenameEdits(request: server.RenameParams): server.WorkspaceEdit | undefined {
+  let result = buildResults[request.textDocument.uri];
 
   if (result) {
-    var response = result.renameQuery({
+    let response = result.renameQuery({
       source: request.textDocument.uri,
       line: request.position.line,
       column: request.position.character,
     });
 
     if (response.ranges !== null) {
-      var documentChanges = [];
-      var map = {};
+      let documentChanges: server.TextDocumentEdit[] = [];
+      let map: Record<string, server.TextEdit[]> = {};
 
-      response.ranges.forEach(function (range) {
-        var edits = map[range.source];
+      for (let range of response.ranges) {
+        let edits = map[range.source];
         if (!edits) {
-          var doc = openDocuments.get(range.source);
+          let doc = openDocuments.get(range.source);
           edits = map[range.source] = [];
           if (doc) {
             documentChanges.push({
               textDocument: { uri: range.source, version: doc.version },
-              edits, edits,
+              edits,
             });
           }
         }
@@ -224,26 +218,24 @@ function computeRenameEdits(request) {
           range: convertRange(range),
           newText: request.newName,
         });
-      });
+      }
 
       return {
-        documentChanges: documentChanges,
+        documentChanges,
       };
     }
   }
-
-  return null;
 }
 
-function formatDocument(request) {
-  var doc = openDocuments.get(request.textDocument.uri)
+function formatDocument(request: server.DocumentFormattingParams): server.TextEdit[] {
+  let doc = openDocuments.get(request.textDocument.uri)
   if (!doc) {
     return [];
   }
 
-  var options = request.options || {};
-  var input = doc.getText();
-  var output = glslx.format(input, {
+  let options = request.options || {};
+  let input = doc.getText();
+  let output = glslx.format(input, {
     indent: options.insertSpaces ? ' '.repeat(options.tabSize || 2) : '\t',
     newline: '\n',
 
@@ -281,24 +273,23 @@ function formatDocument(request) {
   }];
 }
 
-function main() {
+function main(): void {
   connection = server.createConnection(
     new server.IPCMessageReader(process),
     new server.IPCMessageWriter(process));
 
-  reportErrors(function () {
+  reportErrors(() => {
     // Listen to open documents
-    openDocuments = new server.TextDocuments;
+    openDocuments = new server.TextDocuments(TextDocument);
     openDocuments.listen(connection);
     openDocuments.onDidChangeContent(buildLater);
 
     // Grab the workspace when the connection opens
-    connection.onInitialize(function (params) {
-      workspaceRoot = params.rootPath || null;
+    connection.onInitialize(() => {
       buildLater();
       return {
         capabilities: {
-          textDocumentSync: openDocuments.syncKind,
+          textDocumentSync: server.TextDocumentSyncKind.Incremental,
           hoverProvider: true,
           renameProvider: true,
           definitionProvider: true,
@@ -309,48 +300,48 @@ function main() {
     });
 
     // Show tooltips on hover
-    connection.onHover(function (request) {
-      var tooltip = null;
-      reportErrors(function () {
+    connection.onHover(request => {
+      let tooltip: server.Hover | undefined;
+      reportErrors(() => {
         tooltip = computeTooltip(request);
       });
-      return tooltip;
+      return tooltip!;
     });
 
     // Support the "go to definition" feature
-    connection.onDefinition(function (request) {
-      var location = null;
-      reportErrors(function () {
+    connection.onDefinition(request => {
+      let location: server.Definition | undefined;
+      reportErrors(() => {
         location = computeDefinitionLocation(request);
       })
-      return location;
+      return location!;
     });
 
     // Support the go to symbol feature
-    connection.onDocumentSymbol(function (request) {
-      var info = null;
-      reportErrors(function () {
+    connection.onDocumentSymbol(request => {
+      let info: server.SymbolInformation[] | undefined;
+      reportErrors(() => {
         info = computeDocumentSymbols(request);
       });
-      return info;
+      return info!;
     });
 
     // Support the "rename symbol" feature
-    connection.onRenameRequest(function (request) {
-      var edits = null;
-      reportErrors(function () {
+    connection.onRenameRequest(request => {
+      let edits: server.WorkspaceEdit | undefined;
+      reportErrors(() => {
         edits = computeRenameEdits(request);
       });
-      return edits;
+      return edits!;
     });
 
     // Support whole-document formatting
-    connection.onDocumentFormatting(function (request) {
-      var edits = null;
-      reportErrors(function () {
+    connection.onDocumentFormatting(request => {
+      let edits: server.TextEdit[] | undefined;
+      reportErrors(() => {
         edits = formatDocument(request);
       });
-      return edits;
+      return edits!;
     });
 
     // Listen to file system changes for *.glslx files
