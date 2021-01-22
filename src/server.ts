@@ -5,7 +5,7 @@ import * as glslx from 'glslx';
 import * as server from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
-let buildResults: Record<string, glslx.CompileResultIDE | undefined> = {};
+let buildResults: () => Record<string, glslx.CompileResultIDE | undefined> = () => ({});
 let openDocuments: server.TextDocuments<TextDocument>;
 let connection: server.Connection;
 let timeout: NodeJS.Timeout;
@@ -64,61 +64,68 @@ function sendDiagnostics(diagnostics: glslx.Diagnostic[]): void {
   }
 }
 
-function buildLater(): void {
-  clearTimeout(timeout);
-  timeout = setTimeout(() => {
-    reportErrors(() => {
-      let diagnostics: glslx.Diagnostic[] = [];
-      let results: Record<string, glslx.CompileResultIDE> = {};
-      let docs: Record<string, string> = {};
+function buildOnce(): Record<string, glslx.CompileResultIDE> {
+  let results: Record<string, glslx.CompileResultIDE> = {};
+  reportErrors(() => {
+    let diagnostics: glslx.Diagnostic[] = [];
+    let docs: Record<string, string> = {};
 
-      openDocuments.all().forEach(function (doc) {
-        docs[doc.uri] = doc.getText();
-      });
+    for (let doc of openDocuments.all()) {
+      docs[doc.uri] = doc.getText();
+    }
 
-      function fileAccess(includeText: string, relativeURI: string) {
-        let relativePath = uriToPath(relativeURI);
-        let absolutePath = relativePath ? path.resolve(path.dirname(path.resolve(relativePath)), includeText) : path.resolve(includeText);
+    function fileAccess(includeText: string, relativeURI: string) {
+      let relativePath = uriToPath(relativeURI);
+      let absolutePath = relativePath ? path.resolve(path.dirname(path.resolve(relativePath)), includeText) : path.resolve(includeText);
 
-        // In-memory files take precedence
-        let absoluteURI = pathToURI(absolutePath);
-        if (absoluteURI in docs) {
-          return {
-            name: absoluteURI,
-            contents: docs[absoluteURI],
-          };
-        }
-
-        // Then try to read from disk
-        try {
-          return {
-            name: absoluteURI,
-            contents: fs.readFileSync(absolutePath, 'utf8'),
-          };
-        } catch (e) {
-          return null;
-        }
+      // In-memory files take precedence
+      let absoluteURI = pathToURI(absolutePath);
+      if (absoluteURI in docs) {
+        return {
+          name: absoluteURI,
+          contents: docs[absoluteURI],
+        };
       }
 
-      openDocuments.all().forEach(function (doc) {
-        let result = glslx.compileIDE({
-          name: doc.uri,
-          contents: docs[doc.uri],
-        }, {
-          fileAccess: fileAccess,
-        });
-        results[doc.uri] = result;
-        diagnostics.push.apply(diagnostics, result.diagnostics);
-      });
+      // Then try to read from disk
+      try {
+        return {
+          name: absoluteURI,
+          contents: fs.readFileSync(absolutePath, 'utf8'),
+        };
+      } catch (e) {
+        return null;
+      }
+    }
 
-      buildResults = results;
-      sendDiagnostics(diagnostics);
-    });
-  }, 100);
+    for (let doc of openDocuments.all()) {
+      let result = glslx.compileIDE({
+        name: doc.uri,
+        contents: docs[doc.uri],
+      }, {
+        fileAccess,
+      });
+      results[doc.uri] = result;
+      diagnostics.push.apply(diagnostics, result.diagnostics);
+    }
+
+    sendDiagnostics(diagnostics);
+  });
+  return results;
+}
+
+function buildLater(): void {
+  buildResults = () => {
+    let result = buildOnce();
+    buildResults = () => result;
+    return result;
+  };
+  clearTimeout(timeout);
+  timeout = setTimeout(buildResults, 100);
 }
 
 function computeTooltip(request: server.TextDocumentPositionParams): server.Hover | undefined {
-  let result = buildResults[request.textDocument.uri];
+  let result = buildResults()[request.textDocument.uri];
 
   if (result) {
     let response = result.tooltipQuery({
@@ -144,7 +151,7 @@ function computeTooltip(request: server.TextDocumentPositionParams): server.Hove
 }
 
 function computeDefinitionLocation(request: server.TextDocumentPositionParams): server.Definition | undefined {
-  let result = buildResults[request.textDocument.uri];
+  let result = buildResults()[request.textDocument.uri];
 
   if (result) {
     let response = result.definitionQuery({
@@ -163,7 +170,7 @@ function computeDefinitionLocation(request: server.TextDocumentPositionParams): 
 }
 
 function computeDocumentSymbols(request: server.DocumentSymbolParams): server.SymbolInformation[] | undefined {
-  let result = buildResults[request.textDocument.uri];
+  let result = buildResults()[request.textDocument.uri];
 
   if (result) {
     let response = result.symbolsQuery({
@@ -189,7 +196,7 @@ function computeDocumentSymbols(request: server.DocumentSymbolParams): server.Sy
 }
 
 function computeRenameEdits(request: server.RenameParams): server.WorkspaceEdit | undefined {
-  let result = buildResults[request.textDocument.uri];
+  let result = buildResults()[request.textDocument.uri];
 
   if (result) {
     let response = result.renameQuery({
