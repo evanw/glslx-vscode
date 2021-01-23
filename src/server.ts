@@ -141,8 +141,8 @@ function computeTooltip(request: server.TextDocumentPositionParams): server.Hove
     if (response.tooltip !== null && response.range !== null) {
       return {
         contents: {
-          language: 'glslx',
-          value: response.tooltip,
+          kind: 'markdown',
+          value: '```glslx\n' + response.tooltip + '\n```\n' + response.documentation,
         },
         range: convertRange(response.range),
       }
@@ -299,7 +299,7 @@ function computeCompletion(request: server.CompletionParams): server.CompletionI
       label: completion.name,
       documentation: completion.detail === '' ? void 0 : {
         kind: 'markdown',
-        value: '```glslx\n' + completion.detail + '\n```',
+        value: '```glslx\n' + completion.detail + '\n```\n' + completion.documentation,
       },
     }));
   }
@@ -320,6 +320,10 @@ function computeSignature(request: server.SignatureHelpParams): server.Signature
       activeParameter: response.activeArgument !== -1 ? response.activeArgument : null,
       signatures: response.signatures.map(signature => ({
         label: signature.text,
+        documentation: signature.documentation === '' ? void 0 : {
+          kind: 'markdown',
+          value: signature.documentation,
+        },
         parameters: signature.arguments.map(arg => ({
           label: arg,
         })),
