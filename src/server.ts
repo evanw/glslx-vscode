@@ -138,7 +138,7 @@ function computeTooltip(request: server.TextDocumentPositionParams): server.Hove
       ignoreDiagnostics: true,
     });
 
-    if (response.tooltip !== null) {
+    if (response.tooltip !== null && response.range !== null) {
       return {
         contents: {
           language: 'glslx',
@@ -305,6 +305,29 @@ function computeCompletion(request: server.CompletionParams): server.CompletionI
   }
 }
 
+function computeSignature(request: server.SignatureHelpParams): server.SignatureHelp | undefined {
+  let result = buildResults()[request.textDocument.uri];
+
+  if (result) {
+    let response = result.signatureQuery({
+      source: request.textDocument.uri,
+      line: request.position.line,
+      column: request.position.character,
+    });
+
+    return {
+      activeSignature: response.activeSignature !== -1 ? response.activeSignature : null,
+      activeParameter: response.activeArgument !== -1 ? response.activeArgument : null,
+      signatures: response.signatures.map(signature => ({
+        label: signature.text,
+        parameters: signature.arguments.map(arg => ({
+          label: arg,
+        })),
+      })),
+    };
+  }
+}
+
 function main(): void {
   connection = server.createConnection(
     new server.IPCMessageReader(process),
@@ -327,6 +350,9 @@ function main(): void {
           definitionProvider: true,
           documentSymbolProvider: true,
           documentFormattingProvider: true,
+          signatureHelpProvider: {
+            triggerCharacters: ['(', ','],
+          },
           completionProvider: {
             triggerCharacters: ['.'],
           },
@@ -384,6 +410,15 @@ function main(): void {
       let result: server.CompletionItem[] | undefined;
       reportErrors(() => {
         result = computeCompletion(request);
+      });
+      return result;
+    });
+
+    // Support function signature resolution
+    connection.onSignatureHelp(request => {
+      let result: server.SignatureHelp | undefined;
+      reportErrors(() => {
+        result = computeSignature(request);
       });
       return result;
     });
