@@ -280,6 +280,31 @@ function formatDocument(request: server.DocumentFormattingParams): server.TextEd
   }];
 }
 
+function computeCompletion(request: server.CompletionParams): server.CompletionItem[] | undefined {
+  let result = buildResults()[request.textDocument.uri];
+
+  if (result) {
+    let response = result.completionQuery({
+      source: request.textDocument.uri,
+      line: request.position.line,
+      column: request.position.character,
+    });
+
+    return response.completions.map(completion => ({
+      kind:
+        completion.kind === 'struct' ? server.CompletionItemKind.Class :
+          completion.kind === 'function' ? server.CompletionItemKind.Function :
+            completion.kind === 'variable' ? server.CompletionItemKind.Variable :
+              server.CompletionItemKind.Keyword,
+      label: completion.name,
+      documentation: completion.detail === '' ? void 0 : {
+        kind: 'markdown',
+        value: '```glslx\n' + completion.detail + '\n```',
+      },
+    }));
+  }
+}
+
 function main(): void {
   connection = server.createConnection(
     new server.IPCMessageReader(process),
@@ -302,6 +327,9 @@ function main(): void {
           definitionProvider: true,
           documentSymbolProvider: true,
           documentFormattingProvider: true,
+          completionProvider: {
+            triggerCharacters: ['.'],
+          },
         },
       };
     });
@@ -349,6 +377,15 @@ function main(): void {
         edits = formatDocument(request);
       });
       return edits!;
+    });
+
+    // Support symbol completions
+    connection.onCompletion(request => {
+      let result: server.CompletionItem[] | undefined;
+      reportErrors(() => {
+        result = computeCompletion(request);
+      });
+      return result;
     });
 
     // Listen to file system changes for *.glslx files
