@@ -42,7 +42,7 @@ function pathToURI(value: string): string {
   return uri.file(value).toString();
 }
 
-function sendDiagnostics(diagnostics: glslx.Diagnostic[]): void {
+function sendDiagnostics(diagnostics: glslx.Diagnostic[], unusedSymbols: glslx.UnusedSymbol[]): void {
   let map: Record<string, server.Diagnostic[]> = {};
 
   for (let diagnostic of diagnostics) {
@@ -53,6 +53,17 @@ function sendDiagnostics(diagnostics: glslx.Diagnostic[]): void {
       severity: diagnostic.kind === 'error' ? server.DiagnosticSeverity.Error : server.DiagnosticSeverity.Warning,
       range: convertRange(diagnostic.range),
       message: diagnostic.text,
+    });
+  }
+
+  for (let symbol of unusedSymbols) {
+    let key = symbol.range!.source;
+    let group = map[key] || (map[key] = []);
+    group.push({
+      severity: server.DiagnosticSeverity.Hint,
+      range: convertRange(symbol.range!),
+      message: `${JSON.stringify(symbol.name)} is never used in this file`,
+      tags: [server.DiagnosticTag.Unnecessary],
     });
   }
 
@@ -67,6 +78,7 @@ function sendDiagnostics(diagnostics: glslx.Diagnostic[]): void {
 function buildOnce(): Record<string, glslx.CompileResultIDE> {
   let results: Record<string, glslx.CompileResultIDE> = {};
   reportErrors(() => {
+    let unusedSymbols: glslx.UnusedSymbol[] = [];
     let diagnostics: glslx.Diagnostic[] = [];
     let docs: Record<string, string> = {};
 
@@ -106,10 +118,11 @@ function buildOnce(): Record<string, glslx.CompileResultIDE> {
         fileAccess,
       });
       results[doc.uri] = result;
+      unusedSymbols.push.apply(unusedSymbols, result.unusedSymbols);
       diagnostics.push.apply(diagnostics, result.diagnostics);
     }
 
-    sendDiagnostics(diagnostics);
+    sendDiagnostics(diagnostics, unusedSymbols);
   });
   return results;
 }
