@@ -28,7 +28,7 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:attribute|break|const|continue|discard|do|else|false|float|for|highp|if|in|inout|invariant|lowp|mediump|out|precision|return|struct|true|uniform|varying|while)\b</string>
+      <string>\b(?:attribute|break|centroid|const|continue|discard|do|else|flat|for|highp|if|in|inout|invariant|layout|lowp|mediump|out|precision|return|smooth|struct|uniform|varying|while)\b</string>
       <key>name</key>
       <string>keyword.glslx</string>
     </dict>
@@ -40,13 +40,19 @@
     </dict>
     <dict>
       <key>match</key>
+      <string>@\w+\b</string>
+      <key>name</key>
+      <string>keyword.decorator.glslx</string>
+    </dict>
+    <dict>
+      <key>match</key>
       <string>#(?:extension|include|version)\b</string>
       <key>name</key>
       <string>keyword.preprocessor.glslx</string>
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:asm|cast|class|default|double|dvec2|dvec3|dvec4|enum|extern|external|fixed|flat|fvec2|fvec3|fvec4|goto|half|hvec2|hvec3|hvec4|inline|input|interface|long|namespace|noinline|output|packed|public|sampler1D|sampler1DShadow|sampler2DRect|sampler2DRectShadow|sampler2DShadow|sampler3D|sampler3DRect|short|sizeof|static|superp|switch|template|this|typedef|union|unsigned|using|volatile)\b</string>
+      <string>\b(?:asm|cast|class|default|double|dvec2|dvec3|dvec4|enum|extern|external|fixed|fvec2|fvec3|fvec4|goto|half|hvec2|hvec3|hvec4|inline|input|interface|long|namespace|noinline|output|packed|public|sampler1D|sampler1DShadow|sampler2DRect|sampler2DRectShadow|sampler3DRect|short|sizeof|static|superp|switch|template|this|typedef|union|unsigned|using|volatile)\b</string>
       <key>name</key>
       <string>keyword.reserved.glslx</string>
     </dict>
@@ -58,13 +64,13 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:[A-Z_][A-Z0-9_]+|true|false|(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:e[+-]?[0-9]+)?|0[xX][0-9A-Fa-f]+)\b</string>
+      <string>\b(?:[A-Z_][A-Z0-9_]+|true|false|[0-9]+[uU]|(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:e[+-]?[0-9]+)?|0[xX][0-9A-Fa-f]+[uU]?)\b</string>
       <key>name</key>
       <string>constant.numeric.glslx</string>
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:bool|bvec2|bvec3|bvec4|float|int|ivec2|ivec3|ivec4|mat2|mat3|mat4|sampler2D|samplerCube|vec2|vec3|vec4|void)\b</string>
+      <string>\b(?:bool|bvec2|bvec3|bvec4|float|int|isampler2D|isampler2DArray|isampler3D|isamplerCube|ivec2|ivec3|ivec4|mat2|mat2x2|mat2x3|mat2x4|mat3|mat3x2|mat3x3|mat3x4|mat4|mat4x2|mat4x3|mat4x4|sampler2D|sampler2DArray|sampler2DArrayShadow|sampler2DShadow|sampler3D|samplerCube|samplerCubeShadow|uint|usampler2D|usampler2DArray|usampler3D|usamplerCube|uvec2|uvec3|uvec4|vec2|vec3|vec4|void)\b</string>
       <key>name</key>
       <string>storage.type.glslx</string>
     </dict>

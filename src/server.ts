@@ -13,7 +13,7 @@ let timeout: NodeJS.Timeout;
 function reportErrors(callback: () => void): void {
   try {
     callback();
-  } catch (e) {
+  } catch (e: any) {
     let message = e && e.stack || e;
     connection.console.error('glslx: ' + message);
     connection.window.showErrorMessage('glslx: ' + message);
