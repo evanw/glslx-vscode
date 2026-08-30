@@ -303,18 +303,25 @@ function computeCompletion(request: server.CompletionParams): server.CompletionI
       column: request.position.character,
     });
 
-    return response.completions.map(completion => ({
-      kind:
-        completion.kind === 'struct' ? server.CompletionItemKind.Class :
-          completion.kind === 'function' ? server.CompletionItemKind.Function :
-            completion.kind === 'variable' ? server.CompletionItemKind.Variable :
-              server.CompletionItemKind.Keyword,
-      label: completion.name,
-      documentation: completion.detail === '' ? void 0 : {
-        kind: 'markdown',
-        value: '```glslx\n' + completion.detail + '\n```\n' + completion.documentation,
-      },
-    }));
+    return response.completions.map(completion => {
+      const result: server.CompletionItem = {
+        kind:
+          completion.kind === 'struct' ? server.CompletionItemKind.Class :
+            completion.kind === 'function' ? server.CompletionItemKind.Function :
+              completion.kind === 'variable' ? server.CompletionItemKind.Variable :
+                completion.kind === 'method' ? server.CompletionItemKind.Method :
+                  server.CompletionItemKind.Keyword,
+        label: completion.name,
+        documentation: completion.detail === '' ? void 0 : {
+          kind: 'markdown',
+          value: '```glslx\n' + completion.detail + '\n```\n' + completion.documentation,
+        },
+      };
+      if (completion.kind === 'method' && completion.name === 'length') {
+        result.insertText = 'length()';
+      }
+      return result;
+    });
   }
 }
 

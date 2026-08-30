@@ -1,4 +1,5 @@
 {
+	"wordPattern": "[#@]?\\w+",
 	"comments": {
 		"lineComment": "//",
 		"blockComment": ["/*", "*/"]
