@@ -5,7 +5,7 @@ import * as vscode from 'vscode'
 
 let buildResults: () => Record<string, glslx.CompileResultIDE | undefined> = () => ({})
 let diagnosticCollection: vscode.DiagnosticCollection
-let diagnosticUris = new Set<vscode.Uri>()
+let diagnosticURIs = new Set<vscode.Uri>()
 let timeout: ReturnType<typeof setTimeout>
 
 function allOpenDocuments(): vscode.TextDocument[] {
@@ -56,16 +56,16 @@ function sendDiagnostics(diagnostics: glslx.Diagnostic[], unusedSymbols: glslx.U
     group.push(diagnostic)
   }
 
-  const newDiagnosticUris = new Set<vscode.Uri>()
+  const newDiagnosticURIs = new Set<vscode.Uri>()
   for (const doc of allOpenDocuments()) {
-    diagnosticUris.add(doc.uri)
+    diagnosticURIs.add(doc.uri)
   }
-  for (const uri of diagnosticUris) {
+  for (const uri of diagnosticURIs) {
     const diagnostics = map[uri.toString()] || []
     diagnosticCollection.set(uri, diagnostics)
-    if (diagnostics.length > 0) newDiagnosticUris.add(uri)
+    if (diagnostics.length > 0) newDiagnosticURIs.add(uri)
   }
-  diagnosticUris = newDiagnosticUris
+  diagnosticURIs = newDiagnosticURIs
 }
 
 function buildOnce(): Record<string, glslx.CompileResultIDE> {
@@ -74,10 +74,17 @@ function buildOnce(): Record<string, glslx.CompileResultIDE> {
   const diagnostics: glslx.Diagnostic[] = []
   const docs: Record<string, string> = {}
 
-  const fileAccess: glslx.FileAccess = (includeText, relativePath) => {
-    const absolutePath = relativePath ? path.resolve(path.dirname(path.resolve(relativePath)), includeText) : path.resolve(includeText)
+  const fileAccess: glslx.FileAccess = (includeText, relativeTo) => {
+    // Don't attempt to resolve "#include" in files without a file path (e.g. "untitled:" files)
+    const relativeToURI = vscode.Uri.parse(relativeTo)
+    if (relativeToURI.scheme !== 'file') {
+      return null
+    }
 
-    // In-memory files take precedence
+    // Resolve the path relative to the file containing the "#include"
+    const absolutePath = path.resolve(path.dirname(relativeToURI.path), includeText)
+
+    // Open files (which may have unsaved changes) take precedence
     const absoluteURI = vscode.Uri.file(absolutePath).toString()
     if (absoluteURI in docs) {
       return {

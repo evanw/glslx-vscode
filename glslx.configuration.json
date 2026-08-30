@@ -1,12 +1,12 @@
 {
-	"wordPattern": "[#@]?\\w+",
-	"comments": {
-		"lineComment": "//",
-		"blockComment": ["/*", "*/"]
-	},
-	"brackets": [
-		["{", "}"],
-		["[", "]"],
-		["(", ")"]
-	]
+  "wordPattern": "[#@]?\\w+|\"(?:[^\"\\\\]|\\\\.)*\"",
+  "comments": {
+    "lineComment": "//",
+    "blockComment": ["/*", "*/"]
+  },
+  "brackets": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+  ]
 }
