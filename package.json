@@ -44,7 +44,7 @@
     ]
   },
   "dependencies": {
-    "glslx": "0.4.2"
+    "glslx": "0.4.3"
   },
   "devDependencies": {
     "@types/node": "16.18.126",

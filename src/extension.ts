@@ -211,6 +211,34 @@ function computeRenameEdits(document: vscode.TextDocument, position: vscode.Posi
   }
 }
 
+function computeReferenceLocations(document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext): vscode.Location[] | undefined {
+  const result = buildResults()[document.uri.toString()]
+
+  if (result) {
+    const response = result.renameQuery({
+      source: document.uri.toString(),
+      line: position.line,
+      column: position.character,
+    })
+
+    if (response.ranges !== null) {
+      let ranges = response.ranges
+
+      // Potentially exclude declarations to immediately jump to a single use
+      if (!context.includeDeclaration && response.definitions !== null) {
+        const definitions = new Set<string>()
+        for (const range of response.definitions) definitions.add(JSON.stringify(range))
+        ranges = ranges.filter(range => !definitions.has(JSON.stringify(range)))
+      }
+
+      return ranges.map(range => new vscode.Location(
+        vscode.Uri.parse(range.source),
+        convertRange(range),
+      ))
+    }
+  }
+}
+
 function formatDocument(document: vscode.TextDocument, options: vscode.FormattingOptions): vscode.TextEdit[] {
   const input = document.getText()
   const output = glslx.format(input, {
@@ -327,6 +355,13 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.languages.registerRenameProvider({ language: 'glslx' }, {
       provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
         return reportErrors(() => computeRenameEdits(document, position, newName))
+      },
+    }),
+
+    // Support finding all references
+    vscode.languages.registerReferenceProvider({ language: 'glslx' }, {
+      provideReferences(document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext): vscode.ProviderResult<vscode.Location[]> {
+        return reportErrors(() => computeReferenceLocations(document, position, context))
       },
     }),
 

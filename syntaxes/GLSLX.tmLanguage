@@ -46,7 +46,7 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>#(?:extension|include|version)\b</string>
+      <string>#\s*\w+\b</string>
       <key>name</key>
       <string>keyword.preprocessor.glslx</string>
     </dict>
